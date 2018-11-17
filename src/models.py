@@ -120,7 +120,7 @@ class EpicNetwork(nn.Module):
         )
         self.conv8 = nn.Sequential(         # input shape (10, 256, 1)
             nn.Conv1d(
-                in_channels=128,
+                in_channels=256,
                 out_channels=256,
                 kernel_size=3,
                 stride=1,
@@ -133,12 +133,12 @@ class EpicNetwork(nn.Module):
             nn.Conv1d(
                 in_channels=256,
                 out_channels=512,
-                kernel_size=3,
+                kernel_size=1,
                 stride=1,
                 padding=0,
             ),                              # output shape (4, 512, 1)
             nn.ReLU(),
-            nn.MaxPool1d(kernel_size=3, stride=3),  # output shape (2, 512, 1)
+            nn.MaxPool1d(kernel_size=2, stride=1),  # output shape (2, 512, 1)
         )
         self.conv10 = nn.Sequential(         # input shape (2, 512, 1)
             nn.Conv1d(
@@ -151,7 +151,8 @@ class EpicNetwork(nn.Module):
             nn.ReLU(),              # output shape (2, 512, 1)
         )
         self.drop = F.dropout
-        self.out = nn.Linear(2 * 512 * 1, 10)   # fully connected layer, output 10 classes
+        self.fc0 = nn.Linear(512, 128)   # fully connected layer, output 10 classes
+        self.fc1 = nn.Linear(128, 10)
 
     def forward(self, x):
         x = self.conv(x)
@@ -167,5 +168,6 @@ class EpicNetwork(nn.Module):
         x = self.conv10(x)
         x = self.drop(x)
         x = x.view(x.size(0), -1)
-        output = self.out(x)
-        return output, x
+        x = self.fc0(x)
+        x = self.fc1(x)
+        return x

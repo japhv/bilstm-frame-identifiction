@@ -130,7 +130,8 @@ def main(args):
         "val": valid_loader
     }
 
-    model = models.SimpleNetwork().to(device)
+    # model = models.SimpleNetwork().to(device)
+    model = models.EpicNetwork().to(device)
     model.double()
 
     criterion = nn.CrossEntropyLoss()
@@ -138,18 +139,19 @@ def main(args):
     if not args.test:
         # Observe that only parameters of final layer are being optimized as
         # opoosed to before.
-        optimizer_conv = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+        optimizer_conv = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         # Decay LR by a factor of 0.1 every 7 epochs
         exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 
         model, model_loss = train_model(model, dataloaders, criterion, optimizer_conv, exp_lr_scheduler)
 
-        visualize.plot_loss(model_loss, "SimpleNetwork")
+        visualize.plot_loss(model_loss, "EpicNetwork")
 
-        torch.save(model.state_dict(), "./models/SimpleNetwork.pt")
+        torch.save(model.state_dict(), "./models/EpicNetwork.pt")
     else:
-        model.load_state_dict(torch.load("./models/SimpleNetwork.pt"))
+        model.load_state_dict(torch.load("./models/EpicNetwork.pt"))
+
 
 
 
