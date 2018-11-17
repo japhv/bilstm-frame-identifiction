@@ -9,21 +9,27 @@ class SimpleNetwork(nn.Module):
         self.conv0 = nn.Conv1d(1, 3, 1)
         self.conv1 = nn.Conv1d(3, 6, 5)
         self.conv2 = nn.Conv1d(6, 16, 5)
-        self.fc1   = nn.Linear(255952, 120)
-        self.fc2   = nn.Linear(120, 84)
-        self.fc3   = nn.Linear(84, 10)
+        self.conv3 = nn.Conv1d(16, 32, 5)
+        self.fc0 = nn.Linear(17024, 1024)
+        self.fc1 = nn.Linear(1024, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
 
     def forward(self, x):
-        out = self.conv0(x)
+        out = F.relu(self.conv0(x))
+        out = F.max_pool1d(out, 2)
         out = F.relu(self.conv1(out))
-        out = F.max_pool1d(out, 2)
+        out = F.max_pool1d(out, 3)
         out = F.relu(self.conv2(out))
-        out = F.max_pool1d(out, 2)
+        out = F.max_pool1d(out, 4)
+        out = F.relu(self.conv3(out))
+        out = F.max_pool1d(out, 5)
         out = out.view(out.size(0), -1)
+        out = F.relu(self.fc0(out))
         out = F.relu(self.fc1(out))
         out = F.relu(self.fc2(out))
         out = self.fc3(out)
-        return out
+        return F.log_softmax(out, dim=1)
 
 
 class EpicNetwork(nn.Module):
