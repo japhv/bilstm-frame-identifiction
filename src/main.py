@@ -130,7 +130,8 @@ def main(args):
         "val": valid_loader
     }
 
-    model = models.SimpleNetwork().to(device)
+    # model = models.SimpleNetwork().to(device)
+    model = models.EpicNetwork().to(device)
     model.double()
 
     criterion = nn.CrossEntropyLoss()
@@ -145,11 +146,12 @@ def main(args):
 
         model, model_loss = train_model(model, dataloaders, criterion, optimizer_conv, exp_lr_scheduler)
 
-        visualize.plot_loss(model_loss, "SimpleNetwork")
+        visualize.plot_loss(model_loss, "EpicNetwork")
 
-        torch.save(model.state_dict(), "./models/SimpleNetwork.pt")
+        torch.save(model.state_dict(), "./models/EpicNetwork.pt")
     else:
-        model.load_state_dict(torch.load("./models/SimpleNetwork.pt"))
+        model.load_state_dict(torch.load("./models/EpicNetwork.pt"))
+
 
 
 
