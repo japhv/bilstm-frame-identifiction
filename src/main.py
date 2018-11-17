@@ -135,16 +135,21 @@ def main(args):
 
     criterion = nn.CrossEntropyLoss()
 
-    # Observe that only parameters of final layer are being optimized as
-    # opoosed to before.
-    optimizer_conv = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    if not args.test:
+        # Observe that only parameters of final layer are being optimized as
+        # opoosed to before.
+        optimizer_conv = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-    # Decay LR by a factor of 0.1 every 7 epochs
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+        # Decay LR by a factor of 0.1 every 7 epochs
+        exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 
-    model, model_loss = train_model(model, dataloaders, criterion, optimizer_conv, exp_lr_scheduler)
+        model, model_loss = train_model(model, dataloaders, criterion, optimizer_conv, exp_lr_scheduler)
 
-    visualize.plot_loss(model_loss, "SimpleNetwork")
+        visualize.plot_loss(model_loss, "SimpleNetwork")
+
+        torch.save(model.state_dict(), "./models/SimpleNetwork.pt")
+    else:
+        model.load_state_dict(torch.load("./models/SimpleNetwork.pt"))
 
 
 
