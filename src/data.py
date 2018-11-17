@@ -19,7 +19,7 @@ def get_data_loader(type, **kwargs):
     toFloat = transforms.Lambda(lambda x: x / np.iinfo(np.int16).max)
 
     transformations = transforms.Compose([
-        transforms.Lambda(lambda x: signal.resample(x, 32,000)),
+        # transforms.Lambda(lambda x: signal.resample(x, 32,000)),
         toFloat,
         transforms.Lambda(lambda x: np.expand_dims(x, axis=0))
     ])
