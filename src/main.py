@@ -122,7 +122,7 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, num_epochs=
 
 
 def main(args):
-    train_loader = data.get_data_loader("train", batch_size=32, shuffle=True, num_workers=4)
+    train_loader = data.get_data_loader("train", batch_size=64, shuffle=True, num_workers=4)
     valid_loader = data.get_data_loader("valid")
 
     dataloaders = {
@@ -139,10 +139,10 @@ def main(args):
     if not args.test:
         # Observe that only parameters of final layer are being optimized as
         # opoosed to before.
-        optimizer_conv = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+        optimizer_conv = optim.SGD(model.parameters(), lr=0.01, momentum=0.8)
 
-        # Decay LR by a factor of 0.1 every 7 epochs
-        exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+        # Decay LR by a factor of 0.1 every 5 epochs
+        exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=5, gamma=0.1)
 
         model, model_loss = train_model(model, dataloaders, criterion, optimizer_conv, exp_lr_scheduler)
 
