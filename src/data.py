@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib.pyplot import specgram
 
 
-def get_data_loader(type, bonus=False, **kwargs):
+def get_data_loader(type, network="", **kwargs):
     assert (type in ("train", "test", "valid", )), "Invalid data loader type: {}".format(type)
 
     data_path = {
@@ -19,7 +19,10 @@ def get_data_loader(type, bonus=False, **kwargs):
         "valid": "/local/sandbox/nsynth/nsynth-valid"
     }
 
-    if bonus:
+    categorical_field_list = ["instrument_family"]
+
+    if network == "Bonus":
+        categorical_field_list = ["instrument_source"]
         transformations = transforms.Compose([
             transforms.Lambda(lambda x: mfcc_to_tensor(x)), # Convert to 2d MFCC image
             transforms.Lambda(lambda x: x + 1), # Avoid underflow (NaN)
@@ -39,7 +42,7 @@ def get_data_loader(type, bonus=False, **kwargs):
         data_path[type],
         transform=transformations,
         blacklist_pattern=["synth_lead"],  # blacklist synth_lead instrument
-        categorical_field_list=["instrument_family", "instrument_source"])
+        categorical_field_list=categorical_field_list)
     loader = data.DataLoader(dataset, **kwargs)
     return loader
 
