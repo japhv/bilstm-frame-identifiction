@@ -167,7 +167,7 @@ def test(model, test_loader, criterion, classes):
             label_pred = int(pred) if int(pred) < 9 else 9
             spread[label_actual][label_pred] += 1
             correct += 1 if is_correct else 0
-            examples[label_pred][is_correct] = (data, label_pred)
+            examples[label_actual][is_correct] = (data, label_pred)
             y_pred.append(label_pred)
             y_test.append(label_actual)
 
