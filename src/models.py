@@ -2,6 +2,52 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+class BonusNetwork1d(nn.Module):
+    def __init__(self):
+        super(BonusNetwork1d, self).__init__()
+        self.conv1 = torch.nn.Conv1d(
+            in_channels=1,
+            out_channels=3,
+            kernel_size=5,
+            padding=2
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=3,
+                out_channels=6,
+                kernel_size=5,
+                stride=3,
+                padding=2,
+            ),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=5, stride=3),
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=6,
+                out_channels=6,
+                kernel_size=3,
+                stride=2,
+                padding=2,
+            ),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=5, stride=3),
+        )
+        self.drop = F.dropout
+        self.fc1 = torch.nn.Linear(1104, 256)
+        self.fc2 = torch.nn.Linear(256, 92)
+        self.fc3 = torch.nn.Linear(92, 3)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
 
 class BonusNetwork(nn.Module):
     def __init__(self):

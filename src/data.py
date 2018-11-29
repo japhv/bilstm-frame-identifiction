@@ -1,11 +1,10 @@
 import matplotlib as mpl
 mpl.use('Agg')
 mpl.rcParams['agg.path.chunksize'] = 10000
-import torch
 import torch.utils.data as data
-import torch.nn.functional as F
 import torchvision.transforms as transforms
 from pytorch_nsynth.nsynth import NSynth
+from scipy.signal import resample
 import numpy as np
 from matplotlib.pyplot import specgram
 
@@ -23,11 +22,17 @@ def get_data_loader(type, network="", **kwargs):
 
     if network == "Bonus":
         categorical_field_list = ["instrument_source"]
+        # transformations = transforms.Compose([
+        #     transforms.Lambda(lambda x: mfcc_to_tensor(x)), # Convert to 2d MFCC image
+        #     transforms.Lambda(lambda x: x + 1), # Avoid underflow (NaN)
+        #     transforms.Lambda(lambda x: np.expand_dims(x, axis=0)),
+        #     transforms.Lambda(lambda x: F.interpolate(torch.tensor(x), scale_factor=0.25)) # Downscale
+        # ])
         transformations = transforms.Compose([
-            transforms.Lambda(lambda x: mfcc_to_tensor(x)), # Convert to 2d MFCC image
-            transforms.Lambda(lambda x: x + 1), # Avoid underflow (NaN)
-            transforms.Lambda(lambda x: np.expand_dims(x, axis=0)),
-            transforms.Lambda(lambda x: F.interpolate(torch.tensor(x), scale_factor=0.25)) # Downscale
+            transforms.Lambda(lambda x: (x / np.iinfo(np.int16).max) + 1),
+            transforms.Lambda(lambda x: resample(x, 16000)),
+            transforms.Lambda(lambda x: x[:10000]),
+            transforms.Lambda(lambda x: np.expand_dims(x, axis=0))
         ])
 
     else:

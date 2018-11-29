@@ -113,39 +113,6 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, network_typ
     return model, model_loss
 
 
-# def test(model, dataloader):
-#     spreads = [[0 for y in range(10)] for x in range(10)]
-#     test_c = [0 for x in range(10)]
-#     test_t = [0 for x in range(10)]
-#     c_done = [False for x in range(10)]
-#     i_done = [False for x in range(10)]
-#     c_samples, i_samples = 0, 0
-#     y_test, y_pred = [], []
-#
-#     correct = (preds == labels).squeeze()
-#     np_predicted = preds.cpu().numpy()  # Get vector of int class output labels
-#     y_pred.extend(np_predicted)
-#     y_test.extend(if_label.cpu().numpy())
-#
-#     if i_samples < 10 and c_samples < 10:
-#         for i in range(len(outputs)):
-#             label = str(labels[i])  # e.g. 'tensor(0)'
-#             label = int(label[7])  # 0
-#             test_c[label] += correct[i].item()
-#             test_t[label] += 1
-#
-#             if np_predicted[i] != label:
-#                 spreads[label][np_predicted[i]] += 1
-#                 if i_samples < 10:
-#                     i_samples += visualize.save_samples(inputs[i],
-#                                                         np_predicted[i], label,
-#                                                         i_done, False, CLASS_NAMES)
-#             else:
-#                 if c_samples < 10:
-#                     c_samples += visualize.save_samples(inputs[i], None, label,
-#                                                         c_done, True, CLASS_NAMES)
-
-
 def test(model, test_loader, criterion, classes):
     model.eval()
     test_loss = 0
@@ -188,7 +155,7 @@ def main(args):
     model = {
         "Simple": models.SimpleNetwork,
         "Epic" : models.EpicNetwork,
-        "Bonus" : models.BonusNetwork
+        "Bonus" : models.BonusNetwork1d # models.BonusNetwork loads MFCC conv 2d model
     }[args.network]().to(device)
 
     classes = ['bass', 'brass', 'flute', 'guitar', 'keyboard',
