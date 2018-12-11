@@ -23,8 +23,7 @@ def plot_loss(model_loss, model_name):
 
     x = np.linspace(1, epochs, epochs)
 
-    ax.set_title("Average Model Loss over Epochs on {}".format(model_name))
-
+    ax.set_title("Average Model Loss over Epochs")
     ax.set_xlabel("Epochs")
     ax.set_ylabel("Average Loss")
 
