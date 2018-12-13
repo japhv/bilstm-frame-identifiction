@@ -118,7 +118,7 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, args, num_e
     return model, model_loss
 
 
-def test(model, test_loader, criterion, classes):
+def test(model, test_loader, criterion, classes, args):
     model.eval()
     test_loss = 0
     correct = 0
@@ -129,18 +129,13 @@ def test(model, test_loader, criterion, classes):
 
     with torch.no_grad():
         for data, labels, target in test_loader:
+            data = data.reshape(-1, args.sequence_length, args.input_size).to(device)
             data, labels = data.to(device), labels.to(device)
-            print(data.shape)
-            print(labels.shape)
             output = model(data)
             test_loss += criterion(output, labels).item()  # sum up batch loss
             pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
-            print(pred)
             actual = labels.view_as(pred)
-            print(actual)
             is_correct = pred.equal(actual)
-            print(is_correct)
-            break
             label_actual = int(labels) if int(labels) < 9 else 9
             label_pred = int(pred) if int(pred) < 9 else 9
             spread[label_actual][label_pred] += 1
@@ -166,7 +161,10 @@ def main(args):
     classes = ['bass', 'brass', 'flute', 'guitar', 'keyboard',
                    'mallet', 'organ', 'reed', 'string', 'vocal']
 
-    model = models.LSTM(input_size=args.input_size, hidden_size=args.hidden_size,
+    model = {
+        "LSTM": models.LSTM,
+        "BLSTM": models.BLSTM
+    }[args.network](input_size=args.input_size, hidden_size=args.hidden_size,
                         num_layers=args.num_layers, num_classes=len(classes),
                         dropout=args.dropout, device=device)
     model.to(device)
@@ -198,8 +196,8 @@ def main(args):
     else:
         logging.info('Testing...')
         model.load_state_dict(torch.load("./models/{}Network.pt".format(args.network)))
-        test_loader = data.get_data_loader("test", fast=True, batch_size=args.batch_size)
-        y_test, y_pred, spreads, examples = test(model, test_loader, criterion, classes)
+        test_loader = data.get_data_loader("test", fast=False, batch_size=args.batch_size)
+        y_test, y_pred, spreads, examples = test(model, test_loader, criterion, classes, args)
 
         visualize.plot_histograms(classes, spreads, type=args.network)
         visualize.plot_confusion_matrix(y_test, y_pred, classes, type=args.network)
@@ -210,7 +208,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='NSynth LSTM classifier')
-    parser.add_argument('--batch_size', type=int, default=128, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=1, metavar='N',
                         help='input batch size for training (default: 128)')
     parser.add_argument('--test', action='store_true', default=True,
                         help='disables training, loads model')
@@ -230,8 +228,8 @@ if __name__ == "__main__":
                         help='number of epochs to decrease learn-rate (default: 3)')
     parser.add_argument('--gamma', type=float, default=0.1, metavar='N',
                         help='factor to decrease learn-rate (default: 0.1)')
-    parser.add_argument('--sequence-length', type=int, default=200, metavar='N',
-                        help='Window size (default: 200)')
+    parser.add_argument('--sequence-length', type=int, default=400, metavar='N',
+                        help='Window size (default: 400)')
     parser.add_argument('--input-size', type=int, default=40, metavar='N',
                         help='input size (default: 40)')
     parser.add_argument('--hidden-size', type=int, default=128, metavar='N',

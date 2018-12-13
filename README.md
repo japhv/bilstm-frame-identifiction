@@ -37,3 +37,16 @@ To run test on Epic Network
 To run test on Bonus Network
 
 > python3 src/main.py --test --network Bonus
+
+## Hyperparameters
+
+### LSTM
+```bash
+batch_size=1 
+input_size=40
+sequence_length=400
+hidden_size=128
+num_layers=2
+```
+
+
