@@ -1,10 +1,12 @@
-# PyTorch-NSynth-Classification
+# Frame-Semantic-Parser
 
 ## Prerequisites
 
-Install the librosa package
+Create and setup the environment
 
-> pip3 install librosa --user
+> conda env create -f environment.yml
+
+> python -m nltk.downloader framenet_v17
 
 ## Running the code
 
