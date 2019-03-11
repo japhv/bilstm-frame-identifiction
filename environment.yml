@@ -1,0 +1,12 @@
+name: frame-semantic-parser
+channels:
+- pytorch
+- defaults
+dependencies:
+- python>=3.6.0
+- pytorch==1.0.1
+- torchvision==0.2.1
+- pip:
+  - nltk
+  - spacy
+  - torchtext
