@@ -8,9 +8,6 @@ mpl.rcParams['agg.path.chunksize'] = 10000
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-import waveform
-import itertools
-from sklearn.metrics import confusion_matrix
 
 
 def plot_loss(model_loss, model_name):
@@ -62,46 +59,3 @@ def plot_histograms(class_names, spreads, type='Simple'):
         plt.ylabel('# Predicted')
         hfig.savefig('./graphs/NSynth_class_' + class_names[i] + '_accuracy_hist_' + type + '.png',
                      bbox_inches='tight')
-
-
-def save_samples(examples, class_names):
-
-    for i, class_name in enumerate(class_names):
-        for b in [True, False]:
-            data, pred = examples[i][b]
-            data = data.cpu()
-            waveform.plot_wave([class_name], [data], pred, b, sr=16000)
-            waveform.plot_specgram([class_name], [data], pred, b, sr=16000)
-
-
-def plot_confusion_matrix(y_test, y_pred, classes, type='Simple',
-                          title='Confusion Matrix', cmap=plt.cm.Blues):
-    """
-    This function prints and plots the confusion matrix.
-    Normalization can be applied by setting `normalize=True`.
-    """
-    cm = confusion_matrix(y_test, y_pred)
-    np.set_printoptions(precision=2)
-
-    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    print("Normalized confusion matrix")
-    print(cm)
-
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
-    plt.yticks(tick_marks, classes)
-
-    fmt = '.2f'
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, format(cm[i, j], fmt),
-                 horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
-
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    plt.tight_layout()
-    plt.savefig('./graphs/confusion_matrix_' + type + '.png')

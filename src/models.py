@@ -1,42 +1,33 @@
 import torch
+import torch.autograd as autograd
+import torch.nn.functional as F
 import torch.nn as nn
+import torch.optim as optim
+
+torch.manual_seed(1)
 
 
-class LSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout=0.05, device='cpu'):
-        super(LSTM, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
+class BiLSTM(nn.Module):
+
+    def __init__(self, embedding_dim, hidden_dim, vocab, label_size, device, dropout=0.5):
+        super(BiLSTM, self).__init__()
+        self.hidden_dim = hidden_dim
         self.device = device
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
-                            num_layers=num_layers, dropout=dropout, batch_first=True)
-        self.fc = nn.Linear(hidden_size, num_classes)
+        self.dropout = dropout
+        self.embeddings = nn.Embedding(len(vocab), embedding_dim)
+        self.embeddings.from_pretrained(vocab.vectors, freeze=True, sparse=True)
+        self.lstm = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_dim, bidirectional=True)
+        self.hidden2label = nn.Linear(hidden_dim*2, label_size)
 
-    def forward(self, x):
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(self.device).double()
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(self.device).double()
+    def init_hidden(self, x):
+        # first is the hidden h
+        # second is the cell c
+        return (autograd.Variable(torch.zeros(2, x.size(1), self.hidden_dim).to(self.device)),
+                autograd.Variable(torch.zeros(2, x.size(1), self.hidden_dim).to(self.device)))
 
-        out, _ = self.lstm(x, (h0, c0))
-        out = self.fc(out[:, -1, :])
-
-        return out
-
-
-class BLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout=0.05, device='cpu'):
-        super(BLSTM, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.device = device
-        self.blstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
-                            dropout=dropout, bidirectional=True, batch_first=True)
-        self.fc = nn.Linear(hidden_size*2, num_classes)
-
-    def forward(self, x):
-        h0 = torch.zeros(self.num_layers*2, x.size(0), self.hidden_size).to(self.device).double()
-        c0 = torch.zeros(self.num_layers*2, x.size(0), self.hidden_size).to(self.device).double()
-
-        out, _ = self.blstm(x, (h0, c0))
-        out = self.fc(out[:, -1, :])
-
-        return out
+    def forward(self, sentence):
+        x = self.embeddings(sentence)
+        hidden = self.init_hidden(sentence)
+        lstm_out, hidden = self.lstm(x, hidden)
+        y = self.hidden2label(lstm_out[-1])
+        return y
