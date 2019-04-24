@@ -10,3 +10,4 @@ dependencies:
   - nltk
   - spacy
   - torchtext
+  - allennlp==0.8.3
