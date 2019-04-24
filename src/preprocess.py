@@ -96,6 +96,8 @@ def gen_input_csv(input_file, output_path, frames_header, frame_label):
 
     total_frames = len(frames_header)
 
+    csv_header = ["text"] + frames_header
+
     content = []
     for idx, row in docs.iterrows():
         doc = fn.doc(row.doc_id)
@@ -106,7 +108,7 @@ def gen_input_csv(input_file, output_path, frames_header, frame_label):
                 labels[frame_label[frame]] = 1
             content.append(example + labels)
 
-    to_csv(output_path, content, frames_header)
+    to_csv(output_path, content, csv_header)
 
 
 def fn_docs_train_test_val():
