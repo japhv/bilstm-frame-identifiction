@@ -167,9 +167,8 @@ def main(args):
     LABEL = Field(sequential=False, use_vocab=False, is_target=True)
 
     train, val, test = TabularDataset.splits(
-        path='./data/', train='train.csv',
-        validation='validation.csv', test='test.csv', format='csv',
-        skip_header=True,
+        path='./data/', train='exemplars_train.csv', validation='exemplars_validation.csv',
+        test='exemplars_test.csv', format='csv', skip_header=True,
         fields=[('exemplar', TEXT), ('frame_id', None), ('label', LABEL)])
 
     TEXT.build_vocab(train, val, test, vectors="glove.6B.50d")
