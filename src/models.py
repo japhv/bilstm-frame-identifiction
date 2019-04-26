@@ -30,4 +30,4 @@ class BiLSTM(nn.Module):
         hidden = self.init_hidden(sentence)
         lstm_out, hidden = self.lstm(x, hidden)
         y = self.hidden2label(lstm_out[-1])
-        return y
+        return y, F.sigmoid(y)

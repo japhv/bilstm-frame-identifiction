@@ -102,6 +102,8 @@ def gen_input_csv(input_file, output_path, frames_header, frame_label):
     for idx, row in docs.iterrows():
         doc = fn.doc(row.doc_id)
         for sentence in doc.sentence:
+            if not sentence.targets:
+                continue
             example = [sentence.text]
             labels = [0] * total_frames
             for seq, predicate, frame in sentence.targets:
@@ -131,8 +133,6 @@ def fn_docs_train_test_val():
     gen_input_csv(val_docs, val_path, frames_header, frame_label)
 
 
-
-
 def get_frames_used(input="../misc/docs_to_use.csv", output="../misc/frames_ft.csv"):
     frames = defaultdict(lambda: 0)
 
@@ -148,8 +148,6 @@ def get_frames_used(input="../misc/docs_to_use.csv", output="../misc/frames_ft.c
     frame_header = ["label", "frame", "count"]
 
     to_csv(output, frames_list, frame_header)
-
-
 
 
 def preprocess_ontonotes():
