@@ -16,11 +16,16 @@ def writeTrainTest(exemplars_per_frame=100):
     valid_df = pd.DataFrame(columns=columns)
     test_df = pd.DataFrame(columns=columns)
 
-    frames = pd.read_csv("../misc/frames_used.csv")
+    frames_info_header = ["f_id", "f_name", "no_of_examples"]
+    frames_used = []
+    frames_ignored = []
 
-    frames_dir = {int(row["f_id"]): idx for idx, row in frames.iterrows()}
+    curr_label = 0
 
-    for f_id, idx in frames_dir.items():
+    frame_labels = {}
+
+    for frame in fn.frames():
+        f_id = frame.ID
         e_set = [{
             "exemplar": e.text,
             "frame_id" :f_id}
@@ -30,9 +35,19 @@ def writeTrainTest(exemplars_per_frame=100):
 
         print("Working on frame:", f_id, no_of_exemplars)
 
-        if no_of_exemplars < 10:
+        frame_info = {
+            "f_id": f_id,
+            "f_name": frame.name,
+            "no_of_examples": no_of_exemplars
+        }
+
+        if no_of_exemplars < 100:
+            frames_ignored.append(frame_info)
             continue
 
+        frames_used.append(frame_info)
+        frame_labels[f_id] = curr_label
+        curr_label += 1
 
         idx_60 = int(abs(no_of_exemplars * 0.6))
         idx_80 = int(abs(no_of_exemplars * 0.8))
@@ -41,9 +56,12 @@ def writeTrainTest(exemplars_per_frame=100):
         valid_df = valid_df.append(e_set[idx_60:idx_80])
         test_df = test_df.append(e_set[idx_80:])
 
-        train_df["label"] = train_df["frame_id"].apply(lambda x: frames_dir[int(x)])
-        test_df["label"] = test_df["frame_id"].apply(lambda x: frames_dir[int(x)])
-        valid_df["label"] = valid_df["frame_id"].apply(lambda x: frames_dir[int(x)])
+        train_df["label"] = train_df["frame_id"].apply(lambda x: frame_labels[x])
+        test_df["label"] = test_df["frame_id"].apply(lambda x: frame_labels[x])
+        valid_df["label"] = valid_df["frame_id"].apply(lambda x: frame_labels[x])
+
+    to_csv("../misc/frames_used.csv", frames_used, frames_info_header, is_dict=True)
+    to_csv("../misc/frames_ignored.csv", frames_ignored, frames_info_header, is_dict=True)
 
     train_df.to_csv("../data/exemplars_train.csv", index=False, columns=["exemplar", "frame_id", "label"])
     test_df.to_csv("../data/exemplars_test.csv", index=False, columns=["exemplar", "frame_id", "label"])
@@ -53,6 +71,7 @@ def writeTrainTest(exemplars_per_frame=100):
     print("Test set: {}".format(len(test_df)))
     print("Validation set: {}".format(len(valid_df)))
 
+####################################################################################################################
 
 def get_docs():
 
@@ -76,10 +95,14 @@ def get_docs():
     return docs_to_use, docs_to_ignore
 
 
-def to_csv(file_path, csv_data, csv_header):
+def to_csv(file_path, csv_data, csv_header, is_dict=False):
     with open(file_path, 'w') as csvFile:
-        writer = csv.writer(csvFile)
-        writer.writerow(csv_header)
+        if is_dict:
+            writer = csv.DictWriter(csvFile, fieldnames=csv_header)
+            writer.writeheader()
+        else:
+            writer = csv.writer(csvFile)
+            writer.writerow(csv_header)
         writer.writerows(csv_data)
 
 
@@ -149,6 +172,7 @@ def get_frames_used(input="../misc/docs_to_use.csv", output="../misc/frames_ft.c
 
     to_csv(output, frames_list, frame_header)
 
+####################################################################################################
 
 def preprocess_ontonotes():
     import logging
@@ -161,4 +185,4 @@ def preprocess_ontonotes():
 
 
 if __name__ == "__main__":
-    fn_docs_train_test_val()
+    writeTrainTest()
