@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from nltk.corpus import framenet as fn
@@ -175,14 +176,77 @@ def get_frames_used(input="../misc/docs_to_use.csv", output="../misc/frames_ft.c
 ####################################################################################################
 
 def preprocess_ontonotes():
+    import spacy
+    from spacy import displacy
+    from collections import Counter
+    import en_core_web_sm
+    nlp = en_core_web_sm.load()
+
     import logging
     logging.basicConfig(level=logging.INFO)
     ontonotes = Ontonotes()
     ontonotes_path = "../OntoNotes/conll-formatted-ontonotes-5.0/"
     ontonotes_dataset = ontonotes.dataset_iterator(ontonotes_path)
-    for dataset in ontonotes_dataset:
-        print(dataset.keys())
 
+    tabular_dataset = []
+    i = 0
+    for dataset in ontonotes_dataset:
+        if len(dataset.words) < 7:
+            continue
+
+        text = " ".join(dataset.words)
+        doc = nlp(text)
+        entity_frames = {
+            "PERSON": 0,
+            "LOC": 0,
+            "ORG": 0,
+            "WORK_OF_ART": 0,
+            "PRODUCT": 0,
+            "EVENT":0,
+            "OTHER": 0
+        }
+
+        if not doc.ents:
+            continue
+
+        is_none = True
+        for ne in doc.ents:
+            if ne.label_ in entity_frames:
+                entity_frames[ne.label_] = 1
+                is_none = False
+
+        if is_none:
+            entity_frames["OTHER"] = 1
+
+        rows = {"TEXT": text, **entity_frames}
+        tabular_dataset.append(rows)
+
+        if i % 1000 == 0:
+            print("Completed", i+1, "rows")
+        i +=1
+
+    print("Total rows: ", len(tabular_dataset))
+
+    headers = ["TEXT", "PERSON", "LOC", "ORG", "WORK_OF_ART", "PRODUCT", "EVENT", "OTHER"]
+
+    to_csv("../data/ontonotes_ner_full.csv", tabular_dataset, headers, True)
+
+
+def train_validate_test_split(df, train_percent=.6, validate_percent=.2, seed=None):
+    np.random.seed(seed)
+    perm = np.random.permutation(df.index)
+    m = len(df.index)
+    train_end = int(train_percent * m)
+    validate_end = int(validate_percent * m) + train_end
+    train = df.ix[perm[:train_end]]
+    validate = df.ix[perm[train_end:validate_end]]
+    test = df.ix[perm[validate_end:]]
+    return train, validate, test
 
 if __name__ == "__main__":
-    writeTrainTest()
+    onto_full = pd.read_csv("../data/ontonotes_ner_full.csv")
+    train, val, test = train_validate_test_split(onto_full)
+    train.to_csv("../data/ontonote_ner_train.csv", index=False)
+    test.to_csv("../data/ontonotes_ner_test.csv", index=False)
+    val.to_csv("../data/ontonotes_ner_val.csv", index=False)
+
