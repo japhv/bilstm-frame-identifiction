@@ -32,8 +32,7 @@ device = torch.device("cuda:{}".format(gpu_idx))
 
 logging.info("Using device cuda:{}".format(gpu_idx))
 
-frames_df = pd.read_csv("./misc/frames_ft.csv")
-frame_classes = [row.frame for _, row in frames_df.iterrows()]
+frame_classes = ["PERSON", "LOC", "ORG", "WORK_OF_ART", "PRODUCT", "EVENT", "OTHER"]
 no_of_classes = len(frame_classes)
 
 
@@ -183,11 +182,11 @@ def main(args):
 
 
     label_fields = [(frame, LABEL) for frame in frame_classes]
-    fields = [('text', TEXT)] + label_fields
+    fields = [('TEXT', TEXT)] + label_fields
 
     train, val, test = TabularDataset.splits(
-        path='./data/', train='ft_train.csv', validation='ft_val.csv',
-        test='ft_test.csv', format='csv', skip_header=True,
+        path='./data/', train='ontonotes_ner_train.csv', validation='ontonotes_ner_val.csv',
+        test='ontonotes_ner_test.csv', format='csv', skip_header=True,
         fields=fields)
 
     TEXT.build_vocab(train, val, test, vectors="glove.6B.50d")
@@ -212,7 +211,7 @@ def main(args):
             (train, val),  # we pass in the datasets we want the iterator to draw data from
             batch_sizes=(args.batch_size, args.batch_size),
             device=device,  # if you want to use the GPU, specify the GPU number here
-            sort_key=lambda x: len(x.text),
+            sort_key=lambda x: len(x.TEXT),
             # the BucketIterator needs to be told what function it should use to group the data.
             sort_within_batch=False,
             repeat=False  # we pass repeat=False because we want to wrap this Iterator layer.
@@ -249,8 +248,8 @@ if __name__ == "__main__":
                         help='input batch size for training (default: 32)')
     parser.add_argument('--test', action='store_true', default=False,
                         help='disables training, loads model')
-    parser.add_argument('--epochs', type=int, default=10, metavar='N',
-                        help='number of epochs to train (default: 10)')
+    parser.add_argument('--epochs', type=int, default=50, metavar='N',
+                        help='number of epochs to train (default: 50)')
     parser.add_argument('--lr', type=float, default=0.0005, metavar='LR',
                         help='learning rate (default: 0.0005)')
     parser.add_argument('--weight-decay', type=float, default=0.001, metavar='LR',
