@@ -27,16 +27,18 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 
-gpu_idx = get_free_gpu()
-device = torch.device("cuda:{}".format(gpu_idx))
+# gpu_idx = get_free_gpu()
+# device = torch.device("cuda:{}".format(gpu_idx))
+#
+# logging.info("Using device cuda:{}".format(gpu_idx))
 
-logging.info("Using device cuda:{}".format(gpu_idx))
+device = torch.device("cuda:0")
 
 frame_classes = ["PERSON", "LOC", "ORG", "WORK_OF_ART", "PRODUCT", "EVENT", "OTHER"]
 no_of_classes = len(frame_classes)
 
 
-def train_model(model, dataloaders, criterion, optimizer, scheduler, args, num_epochs=10):
+def train_model(model, model_name, dataloaders, criterion, optimizer, scheduler, args, num_epochs=10):
     """
 
     :param model:
@@ -71,7 +73,7 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, args, num_e
             y_pred = np.empty(shape=(0, no_of_classes), dtype=int)
 
             # iterate over data
-            for batch_idx, ((inputs, lengths), labels) in enumerate(dataloaders[phase]):
+            for batch_idx, (inputs, labels) in enumerate(dataloaders[phase]):
 
                 targets = torch.stack(labels, dim=1)
 
@@ -85,7 +87,7 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, args, num_e
                     zeros = torch.zeros(outputs.shape).to(device)
 
 
-                    predicted = torch.where(pred > 0.5, ones, zeros)
+                    predicted = torch.where(pred > 0.4, ones, zeros)
                     loss = criterion(outputs, targets.float())
 
                     # backward + optimize only if in training phase
@@ -98,7 +100,6 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, args, num_e
 
                 # aggregate statistics
                 running_loss += loss.item() * inputs.size(0)
-                running_corrects += (predicted == targets.float()).sum()
 
                 if phase == 'train' and batch_idx % 50 == 0:
                     logging.info('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
@@ -118,18 +119,17 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, args, num_e
                 phase.capitalize(), epoch_loss, epoch_acc, epoch_precision, epoch_recall, epoch_f1))
 
             # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
+            if phase == 'val' and epoch_f1 > best_f1:
                 best_acc = epoch_acc
                 best_f1 = epoch_f1
                 best_precision = epoch_precision
                 best_recall = epoch_recall
                 best_model_wts = model.state_dict()
-                torch.save(best_model_wts, "./models/BLSTMNetwork.pt")
+                torch.save(best_model_wts, "./models/{}.pt".format(model_name))
 
-        print()
 
     time_elapsed = time.time() - since
-    logging.info('Training completed in {:.0f}m {:.0f}s'.format(
+    logging.info('\nTraining completed in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
     logging.info('Best overall val Acc: {:4f}'.format(best_acc))
     logging.info('Best overall val precision: {:4f}'.format(best_precision))
@@ -141,33 +141,33 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, args, num_e
     return model, model_loss, best_precision, best_recall, best_f1
 
 
-def test(model, test_loader, criterion, args):
+def test_model(model, test_loader):
     model.eval()
-    test_loss = 0
-    correct = 0
-    y_test, y_pred = [], []
+
+    y_true = np.empty(shape=(0, no_of_classes), dtype=int)
+    y_pred = np.empty(shape=(0, no_of_classes), dtype=int)
 
     with torch.no_grad():
-        for data, labels, target in test_loader:
-            data = data.reshape(-1, args.sequence_length, args.input_size).to(device)
-            data, labels = data.to(device), labels.to(device)
-            output = model(data)
-            test_loss += criterion(output, labels).item()  # sum up batch loss
-            pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
-            actual = labels.view_as(pred)
-            is_correct = pred.equal(actual)
-            label_actual = int(labels)
-            label_pred = int(pred)
-            correct += 1 if is_correct else 0
-            y_pred.append(label_pred)
-            y_test.append(label_actual)
+        for (inputs, labels) in test_loader:
+            targets = torch.stack(labels, dim=1)
+            outputs, pred = model(inputs)
 
-    test_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+            ones = torch.ones(outputs.shape).to(device)
+            zeros = torch.zeros(outputs.shape).to(device)
 
-    return y_test, y_pred
+            predicted = torch.where(pred > 0.4, ones, zeros)
+
+            y_true = np.append(y_true, targets.cpu().numpy(), axis=0)
+            y_pred = np.append(y_pred, predicted.cpu().numpy(), axis=0)
+
+    test_acc = accuracy_score(y_true, y_pred)
+    test_precision, test_recall, test_f1, _ = precision_recall_fscore_support(y_true, y_pred, average="micro")
+
+
+    print('\nTest set: Accuracy: ({:.2f}%) precision: {:.2f} recall: {:.2f} f1-score: {:.2f} \n'.format(
+        test_acc, test_precision, test_recall, test_f1))
+
+    return y_true, y_pred
 
 
 def main(args):
@@ -176,8 +176,10 @@ def main(args):
     os.makedirs("./graphs", exist_ok=True)
     os.makedirs("./models", exist_ok=True)
 
+    model_name = "BiLSTMNetwork" if not args.attention else "BiLSTM_AttentionNetwork"
 
-    TEXT = Field(sequential=True, lower=True, include_lengths=True)
+
+    TEXT = Field(sequential=True, lower=True, init_token="<bos>", eos_token="<eos>")
     LABEL = Field(sequential=False, use_vocab=False, is_target=True)
 
 
@@ -196,7 +198,8 @@ def main(args):
                           vocab=TEXT.vocab,
                           label_size=no_of_classes,
                           device=device,
-                          dropout=args.dropout
+                          dropout=args.dropout,
+                          attention_layer=args.attention
                           )
 
     model.to(device)
@@ -223,47 +226,62 @@ def main(args):
         }
 
         logging.info('Training...')
-        model, model_loss, precison, recall, f1_score = train_model(model, dataloaders,
-                                        criterion, optimizer,
+        model, model_loss, precison, recall, f1_score = train_model(
+                                        model,
+                                        model_name,
+                                        dataloaders,
+                                        criterion,
+                                        optimizer,
                                         exp_lr_scheduler,
-                                        args, num_epochs=args.epochs)
+                                        args,
+                                        num_epochs=args.epochs
+        )
 
-        visualize.plot_loss(model_loss, "BLSTMNetwork")
+        visualize.plot_loss(model_loss, model_name)
 
     else:
 
-        TEXT.build_vocab(test, vectors="glove.6B.50d")
-
         logging.info('Testing...')
-        model.load_state_dict(torch.load("./models/BLSTMNetwork.pt"))
-        test_iter = Iterator(test, batch_size=64, device=device, sort=False, sort_within_batch=False, repeat=False)
-        y_test, y_pred = test(model, test_iter, criterion, args)
+
+        test_iter = BucketIterator(
+            test,
+            batch_size=args.batch_size,
+            sort_key=lambda x: len(x.TEXT),
+            device=device,
+            train=False,
+            repeat=False
+        )
+
+        model.load_state_dict(torch.load("./models/{}.pt".format(model_name)))
+        y_test, y_pred = test_model(model, test_iter)
 
     logging.info('Completed Successfully!')
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Frame Semantic Parser')
-    parser.add_argument('--batch_size', type=int, default=32, metavar='N',
+    parser = argparse.ArgumentParser(description='Semantic Frame Identification')
+    parser.add_argument('--batch_size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 32)')
     parser.add_argument('--test', action='store_true', default=False,
                         help='disables training, loads model')
-    parser.add_argument('--epochs', type=int, default=50, metavar='N',
-                        help='number of epochs to train (default: 50)')
-    parser.add_argument('--lr', type=float, default=0.0005, metavar='LR',
-                        help='learning rate (default: 0.0005)')
+    parser.add_argument('--epochs', type=int, default=15, metavar='N',
+                        help='number of epochs to train (default: 15)')
+    parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
+                        help='learning rate (default: 0.001)')
     parser.add_argument('--weight-decay', type=float, default=0.001, metavar='LR',
                         help='weight decay L2 Regularizer (default: 0.001)')
-    parser.add_argument('--dropout', type=float, default=0.1, metavar='N',
-                        help='factor to decrease learn-rate (default: 0.1)')
+    parser.add_argument('--dropout', type=float, default=0, metavar='N',
+                        help='factor to decrease learn-rate (default: 0)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='SGD momentum (default: 0.5)')
     parser.add_argument('--step', type=int, default=3, metavar='N',
                         help='number of epochs to decrease learn-rate (default: 3)')
     parser.add_argument('--gamma', type=float, default=0.1, metavar='N',
                         help='factor to decrease learn-rate (default: 0.1)')
-    parser.add_argument('--hidden-size', type=int, default=256, metavar='N',
-                        help='hidden layer size (default: 256)')
+    parser.add_argument('--hidden-size', type=int, default=128, metavar='N',
+                        help='hidden layer size (default: 128)')
     parser.add_argument('--num-layers', type=int, default=1, metavar='N',
                         help='number of layers (default: 1)')
+    parser.add_argument('--attention', action='store_true', default=False,
+                        help='Should add attention be added.')
     main(parser.parse_args())
