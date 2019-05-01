@@ -1,4 +1,4 @@
-# Frame-Semantic-Parser
+# Semantic Frame Identification
 
 ## Prerequisites
 
@@ -30,25 +30,20 @@ Create and setup the environment
 
 To run test on Simple Network
 
-> python3 src/main.py --test --network Simple
+> python3 src/main.py --test
 
-To run test on Epic Network
+To run test on Network with attention
 
-> python3 src/main.py --test --network Epic
-
-To run test on Bonus Network
-
-> python3 src/main.py --test --network Bonus
+> python3 src/main.py --test --attention
 
 ## Hyperparameters
 
 ### LSTM
 ```bash
-batch_size=1 
-input_size=40
-sequence_length=400
+batch_size=64 
 hidden_size=128
-num_layers=2
+num_layers=1
+epochs=15
 ```
 
 
